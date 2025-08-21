@@ -1,5 +1,8 @@
 # Go OCR Text Extractor
 
+<img width="1536" height="1024" alt="gopher_reading_python_mind" src="https://github.com/user-attachments/assets/4096c4fa-4ee2-4f4f-b1dc-ef72fdddecc9" />
+
+
 A powerful and free OCR (Optical Character Recognition) solution for the Go community that bridges the gap between Go's efficiency and Python's rich AI ecosystem.
 
 ## 🎯 Why This Project Exists
