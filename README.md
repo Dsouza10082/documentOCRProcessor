@@ -47,6 +47,28 @@ The project automatically handles Python dependency installation, but you can in
 pip install PyPDF2 pdfplumber pytesseract Pillow
 ```
 
+### Docker
+
+#### Mac Arm64 - Silicon
+```bash
+docker build --build-arg TARGETOS=darwin --build-arg TARGETARCH=arm64 -t ocr-processor:latest .
+```
+
+#### Windows
+```bash
+docker build --build-arg TARGETOS=windows --build-arg TARGETARCH=amd64 -t ocr-processor:latest .
+```
+
+#### Linux
+```bash
+docker build --build-arg TARGETOS=linux --build-arg TARGETARCH=amd64 -t ocr-processor:latest .
+```
+
+#### Linux arm64
+```bash
+docker build --build-arg TARGETOS=linux --build-arg TARGETARCH=arm64 -t ocr-processor:latest .
+```
+
 ### Tesseract OCR Installation
 
 #### Windows
