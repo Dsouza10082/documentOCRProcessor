@@ -23,7 +23,7 @@ func main() {
 	}
 
 	handler.Routes(r)
- 
+
 	port := os.Getenv("PORT")
 
 	if port == "" {
@@ -37,4 +37,3 @@ func main() {
 	}
 
 }
-

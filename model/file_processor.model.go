@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-
-
 type FileProcessor struct {
 	ToProcessDir string
 	SuccessDir   string
@@ -88,7 +86,7 @@ func (fp *FileProcessor) ProcessFile(filePath string) bool {
 
 			
 			preview := result.Text
-			prompt := NewPromptInstance()
+			prompt := NewPromptOCRInstance()
 			promptText := prompt.GetPrompt(preview)
 
 			fmt.Printf("💬 Prompt: %s\n", promptText)
@@ -120,7 +118,7 @@ func (fp *FileProcessor) ProcessFile(filePath string) bool {
 			fmt.Printf("📝 Characters: %d\n", len(result.Text))
 
 			preview := result.Text
-			prompt := NewPromptInstance()
+			prompt := NewPromptOCRInstance()
 			promptText := prompt.GetPrompt(preview)
 
 			fmt.Printf("💬 Prompt: %s\n", promptText)
@@ -187,7 +185,7 @@ func (fp *FileProcessor) processFileAndReturnRawMessage(filePath string) (string
 			fmt.Printf("📝 Characters: %d\n", len(result.Text))
 			
 			preview := result.Text
-			prompt := NewPromptInstance()
+			prompt := NewPromptOCRInstance()
 			promptText := prompt.GetPrompt(preview)
 
 			fmt.Printf("💬 Prompt: %s\n", promptText)
@@ -222,7 +220,7 @@ func (fp *FileProcessor) processFileAndReturnRawMessage(filePath string) (string
 			fmt.Printf("📝 Characters: %d\n", len(result.Text))
 
 			preview := result.Text
-			prompt := NewPromptInstance()
+			prompt := NewPromptOCRInstance()
 			promptText := prompt.GetPrompt(preview)
 
 			fmt.Printf("💬 Prompt: %s\n", promptText)
