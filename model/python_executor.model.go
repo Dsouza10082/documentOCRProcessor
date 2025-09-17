@@ -2,6 +2,7 @@ package model
 
 import (
 	"bufio"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +13,13 @@ import (
 	"strings"
 	"sync"
 )
+
+//go:embed extract_text_from_image.model.py
+var extract_image_py string
+
+//go:embed extract_text_from_pdf.model.py
+var extract_pdf_py string
+
 
 type PythonExecutor struct {
 	pythonPath string
@@ -104,134 +112,12 @@ func (pe *PythonExecutor) CheckPythonDependenciesForImage() error {
 }
 
 func (pe *PythonExecutor) createPDFExtractor() (string, error) {
-	script := `#!/usr/bin/env python3
-
-import sys
-import json
-import os
-from pathlib import Path
-
-def extract_with_pypdf2(pdf_path):
-    try:
-        import PyPDF2
-        
-        text = ""
-        page_count = 0
-        
-        with open(pdf_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-            page_count = len(pdf_reader.pages)
-            
-            for page_num in range(page_count):
-                page = pdf_reader.pages[page_num]
-                text += f"\n--- Página {page_num + 1} ---\n"
-                text += page.extract_text()
-        
-        return True, text, page_count, None
-    except Exception as e:
-        return False, "", 0, str(e)
-
-def extract_with_pdfplumber(pdf_path):
-    """Extract text using pdfplumber (more precise)"""
-    try:
-        import pdfplumber
-        
-        text = ""
-        page_count = 0
-        
-        with pdfplumber.open(pdf_path) as pdf:
-            page_count = len(pdf.pages)
-            
-            for page_num, page in enumerate(pdf.pages):
-                text += f"\n--- Page {page_num + 1} ---\n"
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text
-                else:
-                    text += "[Page without extractable text]"
-        
-        return True, text, page_count, None
-    except Exception as e:
-        return False, "", 0, str(e)
-
-def extract_pdf_text(pdf_path):
-    """Main function for extracting text"""
-    
-    if not os.path.exists(pdf_path):
-        return {
-            "success": False,
-            "text": "",
-            "error": f"Arquivo não encontrado: {pdf_path}",
-            "pages": 0,
-            "filename": os.path.basename(pdf_path)
-        }
-    
-    if not pdf_path.lower().endswith('.pdf'):
-        return {
-            "success": False,
-            "text": "",
-            "error": "File must have .pdf extension",
-            "pages": 0,
-            "filename": os.path.basename(pdf_path)
-        }
-    
-    print(f"📄 Processando PDF: {os.path.basename(pdf_path)}")
-    
-    # Try with pdfplumber (more precise)
-    success, text, pages, error = extract_with_pdfplumber(pdf_path)
-    
-    if not success:
-        print(f"⚠️  pdfplumber failed: {error}")
-        print("🔄 Trying with PyPDF2...")
-        
-        # Fallback to PyPDF2
-        success, text, pages, error = extract_with_pypdf2(pdf_path)
-    
-    result = {
-        "success": success,
-        "text": text.strip(),
-        "error": error if not success else "",
-        "pages": pages,
-        "filename": os.path.basename(pdf_path)
-    }
-    
-    return result
-
-def main():
-    if len(sys.argv) != 2:
-        print(json.dumps({
-            "success": False,
-            "text": "",
-            "error": "Usage: python pdf_extractor.py <pdf_file>",
-            "pages": 0,
-            "filename": ""
-        }))
-        sys.exit(1)
-    
-    pdf_path = sys.argv[1]
-    result = extract_pdf_text(pdf_path)
-    
-    print("JSON_RESULT_START")
-    print(json.dumps(result, ensure_ascii=False, indent=2))
-    print("JSON_RESULT_END")
-    
-    if result["success"]:
-        print(f"\n✅ Extraction completed!")
-        print(f"📊 Total pages: {result['pages']}")
-        print(f"📝 Extracted characters: {len(result['text'])}")
-    else:
-        print(f"\n❌ Error in extraction: {result['error']}")
-
-if __name__ == "__main__":
-    main()
-`
-
 	tmpFile, err := os.CreateTemp("", "pdf_extractor_*.py")
 	if err != nil {
 		return "", fmt.Errorf("error creating temporary file: %v", err)
 	}
 	
-	if _, err := tmpFile.WriteString(script); err != nil {
+	if _, err := tmpFile.WriteString(extract_pdf_py); err != nil {
 		tmpFile.Close()
 		os.Remove(tmpFile.Name())
 		return "", fmt.Errorf("error writing script: %v", err)
@@ -480,105 +366,12 @@ func (pe *PythonExecutor) validatePythonCode(content string) error {
 }
 
 func (pe *PythonExecutor) CreateImageExtractor() (string, error) {
-	script := `#!/usr/bin/env python3
-
-import sys
-import json
-import os
-from PIL import Image
-import pytesseract
-
-def extract_image_text(image_path):
-    try:
-        if not os.path.exists(image_path):
-            return {
-                "success": False,
-                "text": "",
-                "error": f"Arquivo não encontrado: {image_path}",
-                "pages": 0,
-                "filename": os.path.basename(image_path)
-            }
-        
-        valid_extensions = ['.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.gif']
-        file_extension = os.path.splitext(image_path)[1].lower()
-        
-        if file_extension not in valid_extensions:
-            return {
-                "success": False,
-                "text": "",
-                "error": f"Formato de arquivo não suportado: {file_extension}. Suportados: {', '.join(valid_extensions)}",
-                "pages": 0,
-                "filename": os.path.basename(image_path)
-            }
-        
-        with Image.open(image_path) as image:
-            if image.mode != 'RGB':
-                image = image.convert('RGB')
-            
-            custom_config = r'--oem 3 --psm 6 -l por'
-            text = pytesseract.image_to_string(image, config=custom_config)
-            
-            if not text.strip():
-                custom_config = r'--oem 3 --psm 6 -l eng'
-                text = pytesseract.image_to_string(image, config=custom_config)
-            
-            return {
-                "success": True,
-                "text": text.strip(),
-                "error": "",
-                "pages": 1,
-                "filename": os.path.basename(image_path)
-            }
-            
-    except FileNotFoundError:
-        return {
-            "success": False,
-            "text": "",
-            "error": f"File not found: {image_path}",
-            "pages": 0,
-            "filename": os.path.basename(image_path) if image_path else ""
-        }
-    except Exception as e:
-        error_msg = str(e)
-        if "tesseract is not installed" in error_msg.lower():
-            error_msg = "Tesseract OCR is not installed. Install with: sudo apt-get install tesseract-ocr (Linux) or brew install tesseract (Mac)"
-        
-        return {
-            "success": False,
-            "text": "",
-            "error": f"Error processing image: {error_msg}",
-            "pages": 0,
-            "filename": os.path.basename(image_path) if image_path else ""
-        }
-
-def main():
-    if len(sys.argv) != 2:
-        print(json.dumps({
-            "success": False,
-            "text": "",
-            "error": "Usage: python image_extractor.py <image_file>",
-            "pages": 0,
-            "filename": ""
-        }, ensure_ascii=False, indent=2))
-        sys.exit(1)
-
-    image_path = sys.argv[1]
-    result = extract_image_text(image_path)
-    
-    print("JSON_RESULT_START")
-    print(json.dumps(result, ensure_ascii=False, indent=2))
-    print("JSON_RESULT_END")
-
-if __name__ == "__main__":    
-    main()
-`
-
 	tmpFile, err := os.CreateTemp("", "image_extractor_*.py")
 	if err != nil {
 		return "", fmt.Errorf("error creating temporary file: %v", err)
 	}
 	
-	if _, err := tmpFile.WriteString(script); err != nil {
+	if _, err := tmpFile.WriteString(extract_image_py); err != nil {
 		tmpFile.Close()
 		os.Remove(tmpFile.Name())
 		return "", fmt.Errorf("error writing script: %v", err)

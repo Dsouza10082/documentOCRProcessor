@@ -22,7 +22,6 @@ func main() {
 		IdleTimeout:  240 * time.Second, // 4 minutes testing purposes
 	}
 
-	// Test route
 	handler.Routes(r)
  
 	port := os.Getenv("PORT")

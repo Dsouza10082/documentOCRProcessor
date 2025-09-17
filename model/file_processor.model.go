@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+
+
 type FileProcessor struct {
 	ToProcessDir string
 	SuccessDir   string
